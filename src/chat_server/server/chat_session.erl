@@ -51,7 +51,7 @@ new_loop(Socket,State) ->
 					end,
 					PacketLength = 2 + byte_size(PayloadJsonBin),
 					Packet = <<
-						PacketLength:32/big-unsigned-integer,
+%%						PacketLength:32/big-unsigned-integer,
 						?Login_RESPONSE_PROTOCOL_NUMBER:16/big-unsigned-integer,
 						PayloadJsonBin/binary
 					>>,
@@ -126,7 +126,7 @@ new_loop(Socket,State) ->
 					PayloadJsonBin = jsx:encode(#{state => true, data => ChannelInfo}),
 					PacketLength = 2 + byte_size(PayloadJsonBin),
 					Packet = <<
-						PacketLength:32/big-unsigned-integer,
+%%						PacketLength:32/big-unsigned-integer,
 						?JOIN_CHANNEL_RESPONSE_PROTOCOL_NUMBER:16/big-unsigned-integer,
 						PayloadJsonBin/binary
 					>>,
@@ -158,7 +158,12 @@ new_loop(Socket,State) ->
 			io:format("用户[~ts]接受到了频道[~ts]的广播消息[~ts],发消息者[~ts]~n",[maps:get(user,State),ChannelName,Message,SenderName]),
 			PayloadJsonBin = jsx:encode(#{channel => ChannelName, sender => SenderName, message => Message}),
 			PacketLength = 2 + byte_size(PayloadJsonBin),
-			Packet = <<PacketLength:32/big-unsigned-integer, ?MSG_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer, PayloadJsonBin/binary>>,
+			Packet =
+				<<
+%%					PacketLength:32/big-unsigned-integer,
+					?MSG_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer,
+					PayloadJsonBin/binary
+				>>,
 			gen_tcp:send(Socket,Packet),
 			new_loop(Socket,State);
 
@@ -167,7 +172,12 @@ new_loop(Socket,State) ->
 			io:format("用户[~ts]接受到了[~ts]加入频道[~ts]的广播消息~n",[maps:get(user,State),UserName,ChannelName]),
 			PayloadJsonBin = jsx:encode(#{user => UserName, channel => ChannelName}),
 			PacketLength = 2 + byte_size(PayloadJsonBin),
-			Packet = <<PacketLength:32/big-unsigned-integer, ?JOIN_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer, PayloadJsonBin/binary>>,
+			Packet =
+				<<
+%%					PacketLength:32/big-unsigned-integer,
+					?JOIN_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer,
+					PayloadJsonBin/binary
+				>>,
 			gen_tcp:send(Socket,Packet),
 			new_loop(Socket,State);
 
@@ -176,7 +186,12 @@ new_loop(Socket,State) ->
 			io:format("用户[~ts]接受到了[~ts]退出频道[~ts]的广播消息~n",[maps:get(user,State),UserName,ChannelName]),
 			PayloadJsonBin = jsx:encode(#{user => UserName, channel => ChannelName}),
 			PacketLength = 2 + byte_size(PayloadJsonBin),
-			Packet = <<PacketLength:32/big-unsigned-integer, ?QUIT_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer, PayloadJsonBin/binary>>,
+			Packet =
+				<<
+%%					PacketLength:32/big-unsigned-integer,
+					?QUIT_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer,
+					PayloadJsonBin/binary
+				>>,
 			gen_tcp:send(Socket,Packet),
 			new_loop(Socket,State);
 
@@ -186,7 +201,11 @@ new_loop(Socket,State) ->
 			PayloadJsonBin = jsx:encode(#{user => Creator, channel => CreatedChannelName}),
 			io:format("发送频道创建广播，JSON: ~p~n", [PayloadJsonBin]),
 			PacketLength = 2 + byte_size(PayloadJsonBin),
-			Packet = <<PacketLength:32/big-unsigned-integer, ?CREATE_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer, PayloadJsonBin/binary>>,
+			Packet =
+				<<
+%%					PacketLength:32/big-unsigned-integer,
+					?CREATE_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer,
+					PayloadJsonBin/binary>>,
 			gen_tcp:send(Socket,Packet),
 			new_loop(Socket,State);
 
@@ -195,7 +214,12 @@ new_loop(Socket,State) ->
 			io:format("用户[~ts]接受到了删除频道[~ts]的广播消息，删除者[~ts]~n",[maps:get(user,State),DeletedChannelName,Deleter]),
 			PayloadJsonBin = jsx:encode(#{user => Deleter, channel => DeletedChannelName}),
 			PacketLength = 2 + byte_size(PayloadJsonBin),
-			Packet = <<PacketLength:32/big-unsigned-integer, ?DELETE_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer, PayloadJsonBin/binary>>,
+			Packet =
+				<<
+	%%				PacketLength:32/big-unsigned-integer,
+					?DELETE_CHANNEL_BROADCAST_PROTOCOL_NUMBER:16/big-unsigned-integer,
+					PayloadJsonBin/binary
+				>>,
 			gen_tcp:send(Socket,Packet),
 			new_loop(Socket,State)
 	end.
