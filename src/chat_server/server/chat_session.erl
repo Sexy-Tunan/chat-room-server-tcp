@@ -3,7 +3,7 @@
 %% 每个客户端连接对应一个独立的业务处理进程
 %% ==============================================================
 -module(chat_session).
--export([start/1,new_loop/2]).
+-export([start/1,new_loop/2,terminate/2]).
 
 -include("../../../include/protocol/chat_protocol.hrl").
 -include("../../../include/database/chat_database.hrl").
@@ -18,7 +18,7 @@ start(Socket) ->
 			io:format("[chat_session, ~p] 获取了新建socket通道控制权~n", [self()]),
 			io:format("[chat_session, ~p] 正在等待登录消息包~n", [self()]),
 			inet:setopts(Socket, [{active, once}]),
-			new_loop(Socket,#{})
+			new_loop(Socket,#{socket => Socket})
 	end.
 
 
@@ -35,7 +35,7 @@ new_loop(Socket,State) ->
 					{PayloadJsonBin,NewState} = case login_check(DataMap) of
 						true ->
 							io:format("用户[~ts]登录成功~p~n",[UserName,self()]),
-							TempState = State#{login_state => true, user => UserName},
+							TempState = State#{login_state => true, user => UserName, last_world_send_time => 0},
 							%% 查询数据库该用户加入了哪些频道，这些频道有哪些用户
 							{ok,AllChannelInfoWithMembers} = database_queryer:query_all_channel_info_with_members(),
 							PayloadJsonBin = jsx:encode(#{state => true, user => UserName, data => AllChannelInfoWithMembers}),
@@ -57,6 +57,10 @@ new_loop(Socket,State) ->
 					>>,
 					%% 构造数据包返回
 					gen_tcp:send(Socket, Packet),
+%%					case maps:get of
+%%
+%%					end
+
 					inet:setopts(Socket, [{active, once}]),
 					new_loop(Socket, NewState);
 
@@ -66,12 +70,40 @@ new_loop(Socket,State) ->
 					Sender = maps:get(sender,DataMap),
 					ChannelName = maps:get(channel,DataMap),
 					Message = maps:get(message,DataMap),
-					io:format("用户[~ts]往[~ts]频道发送了消息[~ts]~n",[Sender,ChannelName,Message]),
-					{ok, ChannelPid} = channel_manager:query_channel_pid(ChannelName),
-					ChannelPid ! {msg, Sender, Message},
+					%% 增加世界频道发言时间限制
+					case ChannelName =:= <<"world">> of
+						true -> %%如果是世界频道需判断发言时间
+							LastWorldSendTime = maps:get(last_world_send_time,State),
+							io:format("系统当前时间:~p",[erlang:system_time()]),
+							io:format("上次发言时间:~p",[LastWorldSendTime]),
+							case (erlang:system_time(second) - LastWorldSendTime) > 10 of
+								true ->
+									io:format("用户[~ts]往[~ts]频道发送了消息[~ts]~n",[Sender,ChannelName,Message]),
+									{ok, ChannelPid} = channel_manager:query_channel_pid(ChannelName),
+									ChannelPid ! {msg, Sender, Message},
 
-					inet:setopts(Socket, [{active, once}]),
-					new_loop(Socket, State);
+									inet:setopts(Socket, [{active, once}]),
+									new_loop(Socket, State#{last_world_send_time => erlang:system_time(second)});
+								false ->
+									io:format("用户[~ts]在十秒内往[~ts]频道发送了多次消息~n",[Sender,ChannelName]),
+									PayloadJsonBin = jsx:encode(#{state => false, reason => unicode:characters_to_binary("世界频道只允许十秒发言一次",utf8,utf8)}),
+									Packet = <<
+										?LIMIT_WORLD_SEND_PROTOCOL_NUMBER:16/big-unsigned-integer,
+										PayloadJsonBin/binary
+									>>,
+									inet:setopts(Socket, [{active, once}]),
+									gen_tcp:send(Socket, Packet),
+									new_loop(Socket, State#{last_world_send_time => erlang:system_time(second)})
+							end;
+						false ->
+							io:format("用户[~ts]往[~ts]频道发送了消息[~ts]~n",[Sender,ChannelName,Message]),
+							{ok, ChannelPid} = channel_manager:query_channel_pid(ChannelName),
+							ChannelPid ! {msg, Sender, Message},
+
+							inet:setopts(Socket, [{active, once}]),
+							new_loop(Socket, State)
+					end;
+
 
 
 				%% 用户创建频道
@@ -150,7 +182,7 @@ new_loop(Socket,State) ->
 
 		%% ---- TCP 连接关闭 ----
 		{tcp_closed, Socket} ->
-			io:format("[chat_session] 客户端断开连接~n"),
+			io:format("[~p] 客户端断开连接~n",[self()]),
 			{error, disconnect};
 
 		%% 接收到频道广播消息，发送给客户端
@@ -223,6 +255,14 @@ new_loop(Socket,State) ->
 			gen_tcp:send(Socket,Packet),
 			new_loop(Socket,State)
 	end.
+
+
+terminate(_Reason, State) ->
+%%	Socket = maps:get(socket,State),
+%%	UserName = maps:get(user,State),
+
+
+	ok.
 
 
 %%  =============================================================================================

@@ -13,7 +13,7 @@ compile:
 # 启动 erl shell 并自动加载依赖与应用
 run:
 	@$(REBAR) compile
-	@erl -pa _build/default/lib/*/ebin -eval "application:ensure_all_started(ranch), application:ensure_all_started(cowboy), application:ensure_all_started($(PROJECT))."
+	@erl -pa _build/default/lib/*/ebin -eval " application:ensure_all_started($(PROJECT))."
 
 # 只启动 shell，不启动 app
 shell:
@@ -24,7 +24,7 @@ shell:
 restart:
 	@$(REBAR) clean
 	@$(REBAR) compile
-	@erl -pa _build/default/lib/*/ebin -eval "application:ensure_all_started(ranch), application:ensure_all_started(cowboy), application:ensure_all_started($(PROJECT)), application:start($(PROJECT))."
+	@erl -pa _build/default/lib/*/ebin -eval "application:ensure_all_started(jsx), application:ensure_all_started($(PROJECT)), application:start($(PROJECT))."
 
 
 # 清理

@@ -87,11 +87,15 @@ query_joined_channel_info(UserName) -> gen_server:call(?MODULE,{query_joined_cha
 %% ====================================================================
 %% 初始化方法
 init([IsNeedInitData]) ->
+
+	%% 表示希望捕获退出信号，而不是被动退出
+	process_flag(trap_exit, true),
+
 	%% 从dets数据库中查出数据加载到ets
 	%% 定义所有表的元信息
 	TablesInfo = [
 		{user,    "data/user.dets",    user_ets,    #user.name},
-		{msg,     "data/msg.dets",     msg_ets,     #msg.user_name},
+%%		{msg,     "data/msg.dets",     msg_ets,     #msg.user_name},
 		{channel, "data/channel.dets", channel_ets, #channel.name},
 		{channel_user, "data/channel_user.dets", channel_user_ets, #channel_user.channel_name}
 	],
