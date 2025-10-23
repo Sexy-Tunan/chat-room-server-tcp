@@ -93,7 +93,7 @@ new_loop(Socket,State) ->
 									>>,
 									inet:setopts(Socket, [{active, once}]),
 									gen_tcp:send(Socket, Packet),
-									new_loop(Socket, State#{last_world_send_time => erlang:system_time(second)})
+									new_loop(Socket, State)
 							end;
 						false ->
 							io:format("用户[~ts]往[~ts]频道发送了消息[~ts]~n",[Sender,ChannelName,Message]),
